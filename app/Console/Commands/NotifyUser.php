@@ -41,7 +41,7 @@ class NotifyUser extends Command
                 ->where('customer_site_id', $customerSite->id)
                 ->where('status_code', '!=', '200')
                 ->orderBy('created_at', 'desc')
-                ->first();
+                ->latest();
 
             if ($responseNotSuccess) {
                 $this->notifyUser($customerSite, $responseTimes);
