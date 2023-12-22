@@ -47,9 +47,7 @@ class NotifyUser extends Command
                 $this->notifyUser($customerSite, $responseTimes);
                 $customerSite->last_notify_user_at = Carbon::now();
                 $customerSite->save();
-            }
-
-            if ($responseTimeAverage >= ($customerSite->down_threshold * 0.9)) {
+            } else if ($responseTimeAverage >= ($customerSite->down_threshold * 0.9)) {
                 $this->notifyUser($customerSite, $responseTimes);
                 $customerSite->last_notify_user_at = Carbon::now();
                 $customerSite->save();
