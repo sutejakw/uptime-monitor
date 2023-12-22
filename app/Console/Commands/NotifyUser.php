@@ -28,13 +28,28 @@ class NotifyUser extends Command
             if (!$customerSite->canNotifyUser()) {
                 continue;
             }
+            
             $responseTimes = MonitoringLog::query()
                 ->where('customer_site_id', $customerSite->id)
                 ->orderBy('created_at', 'desc')
                 ->take(5)
-                ->get(['response_time', 'created_at']);
+                ->get(['response_time', 'created_at', 'status_code']);
+
             $responseTimeAverage = $responseTimes->avg('response_time');
-            if ($responseTimes->avg('response_time') >= ($customerSite->down_threshold * 0.9)) {
+
+            $responseNotSuccess = MonitoringLog::query()
+                ->where('customer_site_id', $customerSite->id)
+                ->where('status_code', '!=', '200')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($responseNotSuccess) {
+                $this->notifyUser($customerSite, $responseTimes);
+                $customerSite->last_notify_user_at = Carbon::now();
+                $customerSite->save();
+            }
+
+            if ($responseTimeAverage >= ($customerSite->down_threshold * 0.9)) {
                 $this->notifyUser($customerSite, $responseTimes);
                 $customerSite->last_notify_user_at = Carbon::now();
                 $customerSite->save();
@@ -64,7 +79,7 @@ class NotifyUser extends Command
         $text .= "\n\nLast 5 response time:";
         $text .= "\n";
         foreach ($responseTimes as $responseTime) {
-            $text .= $responseTime->created_at->format('H:i:s').':   '.$responseTime->response_time.' ms';
+            $text .= $responseTime->created_at->format('H:i:s').':   '.$responseTime->response_time.' ms' . ' HTTP STATUS '.$responseTime->status_code;
             $text .= "\n";
         }
         $text .= "\nCheck here:";
